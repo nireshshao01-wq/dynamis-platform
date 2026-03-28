@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>DYNAMIS Admin</title>
+
+<style>
+body{
+background:#020617;
+color:white;
+font-family:Arial;
+padding:20px;
+}
+
+.card{
+background:#020617;
+border:1px solid #1e293b;
+padding:15px;
+border-radius:8px;
+margin-bottom:10px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>Admin Console</h2>
+
+<div id="adminClients"></div>
+
+<script>
+async function loadAdmin(){
+
+  const res = await fetch("/api/clients")
+  const clients = await res.json()
+
+  document.getElementById("adminClients").innerHTML =
+    clients.map(c=>`
+      <div class="card">
+        ${c.name}
+      </div>
+    `).join("")
+}
+
+loadAdmin()
+</script>
+
+</body>
+</html>

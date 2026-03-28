@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>DYNAMIS Cloud Billing Upload</title>
+
+<link rel="stylesheet" href="/css/style.css">
+
+</head>
+
+<body>
+
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">DYNAMIS</div>
+
+    <nav>
+      <a href="/dashboard.html">📊 Dashboard</a>
+      <a href="/upload.html" class="active">⬆ Upload Bill</a>
+      <a href="/clients.html">👥 Clients</a>
+      <a href="/partner.html">🤝 Partner Console</a>
+    </nav>
+  </div>
+
+  <!-- MAIN -->
+  <div class="container">
+
+    <h1>DYNAMIS Cloud Billing Upload</h1>
+
+    <div class="card" style="max-width:600px">
+
+      <p>Select a client and upload AWS, Azure or GCP billing CSV.</p>
+
+      <form id="uploadForm">
+
+        <label>Client</label>
+        <select id="clientSelect" name="client_id">
+          <option>Loading clients...</option>
+        </select>
+
+        <label style="margin-top:15px;">Billing CSV</label>
+        <input type="file" name="file" required>
+
+        <button type="submit" style="margin-top:20px;">
+          Upload & Analyse
+        </button>
+
+      </form>
+
+      <div id="result" style="margin-top:20px;"></div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+/* API BASE */
+const API = "/api"
+
+/* LOAD CLIENTS */
+async function loadClients(){
+
+  try{
+
+    const res = await fetch(API + "/clients")
+    const clients = await res.json()
+
+    console.log("Clients:", clients)
+
+    const select = document.getElementById("clientSelect")
+
+    select.innerHTML = '<option value="">Select Client</option>'
+
+    if(!Array.isArray(clients)){
+      console.error("Invalid client list:", clients)
+      return
+    }
+
+    if(clients.length === 0){
+      select.innerHTML = '<option>No clients found</option>'
+      return
+    }
+
+    clients.forEach(client =>{
+
+      const option = document.createElement("option")
+
+      option.value = client.id
+      option.textContent = client.name
+
+      select.appendChild(option)
+
+    })
+
+  }catch(err){
+
+    console.error("Client loading failed:", err)
+
+    document.getElementById("clientSelect").innerHTML =
+      "<option>Error loading clients</option>"
+  }
+
+}
+
+/* HANDLE UPLOAD */
+document.getElementById("uploadForm").addEventListener("submit", async (e)=>{
+
+  e.preventDefault()
+
+  const formData = new FormData(e.target)
+
+  console.log("Uploading CSV for client:", formData.get("client_id"))
+
+  document.getElementById("result").innerHTML =
+    "Uploading billing file..."
+
+  try{
+
+    const res = await fetch(API + "/upload",{
+      method:"POST",
+      body:formData
+    })
+
+    const data = await res.json()
+
+    console.log("Upload response:", data)
+
+    if(res.ok){
+
+      document.getElementById("result").innerHTML = `
+        <h3>✅ Upload Successful</h3>
+        Rows Inserted: <b>${data.rowsInserted || 0}</b>
+        <br><br>
+        Opening Executive Dashboard...
+      `
+
+      setTimeout(()=>{
+        window.location.href="/dashboard.html"
+      },2000)
+
+    }else{
+
+      document.getElementById("result").innerHTML =
+        "❌ Upload failed: " + (data.error || "Unknown error")
+
+    }
+
+  }catch(err){
+
+    console.error("Upload error:", err)
+
+    document.getElementById("result").innerHTML =
+      "❌ Upload failed. Please check console."
+
+  }
+
+})
+
+/* INITIALISE */
+window.addEventListener("DOMContentLoaded", loadClients)
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,218 @@
+/* =========================
+   BASE
+========================= */
+
+body{
+margin:0;
+font-family:Inter, Arial;
+background: radial-gradient(circle at top, #020617, #020617 60%, #01040a);
+color:#e2e8f0;
+transition:0.3s;
+}
+
+/* LIGHT MODE */
+body.light{
+background:#f8fafc;
+color:#0f172a;
+}
+
+/* =========================
+   SIDEBAR
+========================= */
+
+.sidebar{
+width:240px;
+height:100vh;
+position:fixed;
+left:0;
+top:0;
+padding:20px;
+border-right:1px solid rgba(255,255,255,0.05);
+background:rgba(2,6,23,0.7);
+backdrop-filter:blur(20px);
+}
+
+body.light .sidebar{
+background:white;
+border-color:#e2e8f0;
+}
+
+.sidebar h2{
+margin-bottom:20px;
+}
+
+.sidebar a{
+display:block;
+padding:10px;
+margin-bottom:5px;
+text-decoration:none;
+color:inherit;
+border-radius:8px;
+transition:0.2s;
+}
+
+.sidebar a:hover{
+background:rgba(59,130,246,0.15);
+}
+
+/* =========================
+   MAIN
+========================= */
+
+.container{
+margin-left:260px;
+padding:20px;
+}
+
+/* =========================
+   CARDS (GLASS)
+========================= */
+
+.card{
+background:rgba(255,255,255,0.03);
+border:1px solid rgba(255,255,255,0.08);
+border-radius:14px;
+padding:20px;
+backdrop-filter:blur(10px);
+transition:0.3s;
+position:relative;
+overflow:hidden;
+}
+
+/* Glow layer */
+.card::before{
+content:"";
+position:absolute;
+top:-50%;
+left:-50%;
+width:200%;
+height:200%;
+background:radial-gradient(circle, rgba(59,130,246,0.15), transparent 70%);
+opacity:0;
+transition:0.4s;
+}
+
+.card:hover::before{
+opacity:1;
+}
+
+.card:hover{
+transform:translateY(-6px) scale(1.01);
+box-shadow:0 20px 40px rgba(0,0,0,0.6);
+}
+
+/* LIGHT MODE CARDS */
+body.light .card{
+background:white;
+border:1px solid #e2e8f0;
+}
+
+/* =========================
+   KPI VALUES
+========================= */
+
+.kpi-value{
+font-size:26px;
+font-weight:600;
+margin-top:10px;
+}
+
+/* =========================
+   GRID
+========================= */
+
+.dashboard-grid{
+display:grid;
+grid-template-columns:repeat(12,1fr);
+gap:20px;
+}
+
+/* =========================
+   HERO (CFO)
+========================= */
+
+.hero{
+grid-column:span 12;
+padding:30px;
+border-radius:16px;
+background:linear-gradient(135deg,#065f46,#10b981);
+color:white;
+box-shadow:0 10px 40px rgba(16,185,129,0.3);
+transition:0.3s;
+}
+
+.hero:hover{
+transform:scale(1.01);
+}
+
+.hero-value{
+font-size:36px;
+font-weight:bold;
+margin-top:10px;
+}
+
+/* =========================
+   BUTTONS
+========================= */
+
+button{
+padding:8px 14px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+background:linear-gradient(135deg,#3b82f6,#2563eb);
+color:white;
+transition:0.2s;
+}
+
+button:hover{
+transform:translateY(-2px);
+box-shadow:0 8px 20px rgba(59,130,246,0.4);
+}
+
+/* =========================
+   AI INSIGHTS
+========================= */
+
+.ai p{
+margin:6px 0;
+padding:10px;
+border-radius:8px;
+background:rgba(255,255,255,0.03);
+border:1px solid rgba(255,255,255,0.08);
+opacity:0;
+transform:translateY(10px);
+transition:0.3s;
+}
+
+body.light .ai p{
+background:#f1f5f9;
+border:1px solid #e2e8f0;
+}
+
+/* =========================
+   CHARTS
+========================= */
+
+canvas{
+margin-top:10px;
+}
+
+/* =========================
+   ANIMATIONS
+========================= */
+
+@keyframes fadeIn{
+from{
+opacity:0;
+transform:translateY(10px);
+}
+to{
+opacity:1;
+transform:translateY(0);
+}
+}
+
+.card{
+animation:fadeIn 0.6s ease forwards;
+}

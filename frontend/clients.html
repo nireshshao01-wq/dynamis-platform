@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>DYNAMIS Clients</title>
+
+<link rel="stylesheet" href="/css/style.css">
+
+<style>
+
+.search{
+margin-bottom:20px;
+padding:10px;
+width:300px;
+border-radius:6px;
+border:1px solid #1e293b;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+}
+
+td,th{
+padding:12px;
+border-bottom:1px solid #1e293b;
+}
+
+.actions button{
+margin-right:5px;
+}
+
+.profile{
+position:fixed;
+right:0;
+top:0;
+width:300px;
+height:100%;
+background:#020617;
+border-left:1px solid #1e293b;
+padding:20px;
+display:none;
+}
+
+body.light .profile{
+background:white;
+border-color:#e2e8f0;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="sidebar">
+<h2>DYNAMIS</h2>
+
+<a href="/dashboard.html">📊 Dashboard</a>
+<a href="/analytics.html">📈 Analytics</a>
+<a href="/revenue.html">💰 Revenue</a>
+<a href="/clients.html">👥 Clients</a>
+
+<br>
+<button onclick="toggleTheme()">🌗 Theme</button>
+</div>
+
+<div class="container">
+
+<h1>Clients</h1>
+
+<input class="search" id="search" placeholder="Search clients..." oninput="filterClients()">
+
+<div class="card">
+<table id="clientTable">
+<tr>
+<th>Name</th>
+<th>Cloud</th>
+<th>Industry</th>
+<th>Actions</th>
+</tr>
+</table>
+</div>
+
+</div>
+
+<div class="profile" id="profile">
+<h3 id="pName"></h3>
+<p><strong>Cloud:</strong> <span id="pCloud"></span></p>
+<p><strong>Industry:</strong> <span id="pIndustry"></span></p>
+
+<button onclick="closeProfile()">Close</button>
+</div>
+
+<script src="/js/app.js"></script>
+
+<script>
+
+const API="/api"
+let allClients=[]
+
+function authHeaders(extra={}){
+return {
+...extra,
+Authorization:"Bearer "+localStorage.getItem("token")
+}
+}
+
+/* LOAD */
+async function loadClients(){
+const res=await fetch(API+"/clients",{headers:authHeaders()})
+allClients=await res.json()
+render(allClients)
+}
+
+/* RENDER */
+function render(data){
+
+const table=document.getElementById("clientTable")
+
+table.innerHTML=`
+<tr>
+<th>Name</th>
+<th>Cloud</th>
+<th>Industry</th>
+<th>Actions</th>
+</tr>
+`
+
+data.forEach(c=>{
+
+table.innerHTML+=`
+<tr>
+<td style="cursor:pointer;color:#3b82f6"
+    onclick="openDashboard('${c.id}')">
+    ${c.name}
+</td>
+<td>${c.cloud}</td>
+<td>${c.industry || "-"}</td>
+<td class="actions">
+
+<button onclick="editClient('${c.id}')">Edit</button>
+<button onclick="deleteClient('${c.id}')">Delete</button>
+
+</td>
+</tr>
+`
+
+})
+
+}
+
+/* 🔥 NEW: OPEN DASHBOARD */
+function openDashboard(id){
+window.location.href = "/dashboard.html?client=" + id
+}
+
+/* SEARCH */
+function filterClients(){
+const q=document.getElementById("search").value.toLowerCase()
+const filtered=allClients.filter(c=>c.name.toLowerCase().includes(q))
+render(filtered)
+}
+
+/* DELETE */
+async function deleteClient(id){
+if(!confirm("Delete this client?")) return
+
+await fetch(API+"/clients/"+id,{
+method:"DELETE",
+headers:authHeaders()
+})
+
+loadClients()
+}
+
+/* EDIT */
+async function editClient(id){
+
+const name=prompt("New name:")
+if(!name) return
+
+await fetch(API+"/clients/"+id,{
+method:"PUT",
+headers:authHeaders({"Content-Type":"application/json"}),
+body:JSON.stringify({name})
+})
+
+loadClients()
+}
+
+/* PROFILE */
+function openProfile(id){
+const c=allClients.find(x=>x.id===id)
+
+document.getElementById("pName").innerText=c.name
+document.getElementById("pCloud").innerText=c.cloud
+document.getElementById("pIndustry").innerText=c.industry || "-"
+
+document.getElementById("profile").style.display="block"
+}
+
+function closeProfile(){
+document.getElementById("profile").style.display="none"
+}
+
+document.addEventListener("DOMContentLoaded",loadClients)
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="UTF-8">
+<title>DYNAMIS Revenue Dashboard</title>
+
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/app.css">
+
+<style>
+
+/* =========================
+   MAIN LAYOUT FIX
+========================= */
+.main{
+margin-left:220px;
+padding:30px;
+}
+
+.container{
+max-width:1400px;
+margin:0 auto;
+}
+
+/* =========================
+   HEADER
+========================= */
+h1{
+font-size:24px;
+margin-bottom:20px;
+font-weight:600;
+}
+
+/* =========================
+   KPI GRID
+========================= */
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
+gap:16px;
+margin-bottom:25px;
+}
+
+.card{
+background: rgba(2,6,23,0.85);
+padding:18px;
+border:1px solid #1e293b;
+border-radius:12px;
+backdrop-filter: blur(10px);
+box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+transition: all 0.25s ease;
+}
+
+.card:hover{
+transform: translateY(-3px);
+border-color:#3b82f6;
+}
+
+.card-title{
+font-size:12px;
+color:#94a3b8;
+margin-bottom:8px;
+}
+
+.big{
+font-size:22px;
+font-weight:600;
+}
+
+/* =========================
+   PIPELINE
+========================= */
+.pipeline{
+display:grid;
+grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+gap:16px;
+}
+
+.stage{
+background: rgba(2,6,23,0.85);
+border:1px solid #1e293b;
+padding:12px;
+border-radius:12px;
+min-height:180px;
+max-height:400px;
+overflow-y:auto;
+transition: all 0.2s ease;
+}
+
+.stage:hover{
+border-color:#3b82f6;
+}
+
+.stage h3{
+margin:0;
+font-size:12px;
+color:#94a3b8;
+text-transform: uppercase;
+}
+
+.stage-value{
+font-size:12px;
+margin-bottom:10px;
+color:#10b981;
+font-weight:600;
+}
+
+/* =========================
+   DEAL CARDS
+========================= */
+.deal{
+background: linear-gradient(135deg,#1e293b,#0f172a);
+padding:10px;
+border-radius:8px;
+margin-bottom:8px;
+cursor:grab;
+font-size:12px;
+transition: all 0.2s ease;
+}
+
+.deal:hover{
+transform: scale(1.02);
+border:1px solid #3b82f6;
+}
+
+.deal.hot{
+border:1px solid #ef4444;
+}
+
+/* =========================
+   INPUT
+========================= */
+input{
+width:100%;
+margin-top:5px;
+background:#020617;
+border:1px solid #1e293b;
+color:white;
+padding:5px;
+border-radius:5px;
+font-size:11px;
+}
+
+/* =========================
+   SECTION TITLE
+========================= */
+h2{
+margin:15px 0;
+font-size:16px;
+font-weight:500;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+<h2>DYNAMIS</h2>
+
+<a href="/dashboard.html">📊 Dashboard</a>
+<a href="/analytics.html">📈 Analytics</a>
+<a href="/revenue.html">💰 Revenue</a>
+<a href="/clients.html">👥 Clients</a>
+
+<br>
+<button onclick="toggleTheme()">🌗 Theme</button>
+
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<div class="container">
+
+<h1>💰 DYNAMIS Revenue Dashboard</h1>
+
+<!-- KPI -->
+<div class="grid">
+
+  <div class="card">
+    <div class="card-title">Total Revenue</div>
+    <div id="totalRevenue" class="big">R 0</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Monthly Projection</div>
+    <div id="monthlyProjection" class="big">R 0</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Active Deals</div>
+    <div id="dealCount" class="big">0</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Avg Deal</div>
+    <div id="avgDeal" class="big">R 0</div>
+  </div>
+
+</div>
+
+<!-- PIPELINE -->
+<h2>📊 Deal Pipeline</h2>
+
+<div class="pipeline">
+
+  <div class="stage" id="prospect" ondrop="drop(event)" ondragover="allowDrop(event)">
+    <h3>Prospect</h3>
+    <div class="stage-value" id="value-prospect"></div>
+  </div>
+
+  <div class="stage" id="demo" ondrop="drop(event)" ondragover="allowDrop(event)">
+    <h3>Demo</h3>
+    <div class="stage-value" id="value-demo"></div>
+  </div>
+
+  <div class="stage" id="proposal" ondrop="drop(event)" ondragover="allowDrop(event)">
+    <h3>Proposal</h3>
+    <div class="stage-value" id="value-proposal"></div>
+  </div>
+
+  <div class="stage" id="closed" ondrop="drop(event)" ondragover="allowDrop(event)">
+    <h3>Closed</h3>
+    <div class="stage-value" id="value-closed"></div>
+  </div>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="/js/app.js"></script>
+<script src="/js/revenue.js"></script>
+
+</body>
+</html>

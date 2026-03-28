@@ -1,0 +1,51 @@
+/* =========================
+   GLOBAL APP LAYOUT
+========================= */
+
+body{
+  margin:0;
+  font-family: Inter, Arial, sans-serif;
+  background:#020617;
+  color:#e2e8f0;
+}
+
+/* SIDEBAR */
+.sidebar{
+  width:220px;
+  background:#020617;
+  border-right:1px solid #1e293b;
+  height:100vh;
+  position:fixed;
+  left:0;
+  top:0;
+  padding:20px;
+}
+
+.sidebar h2{
+  margin-bottom:20px;
+}
+
+.sidebar a{
+  display:block;
+  padding:10px;
+  margin-bottom:5px;
+  color:#cbd5f5;
+  text-decoration:none;
+  border-radius:6px;
+}
+
+.sidebar a:hover{
+  background:#1e293b;
+}
+
+/* MAIN CONTENT */
+.main{
+  margin-left:220px;
+  padding:30px;
+}
+
+/* CONTAINER */
+.container{
+  max-width:1400px;
+  margin:0 auto;
+}
