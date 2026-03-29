@@ -4,23 +4,18 @@ const router = express.Router()
 const supabase = require('../supabaseClient')
 const generateReport = require('../services/reportGenerator')
 
-router.get('/', async (req,res)=>{
+router.get("/", async (req,res)=>{
 
 try{
 
-const userId = req.headers.userid
+const clientId = req.query.client_id
 
-if(!userId){
-return res.status(401).json({error:"User not authenticated"})
+if(!clientId){
+  return res.status(400).json({ error: "client_id required" })
 }
 
-const { data: profile } = await supabase
-.from('profiles')
-.select('client_id')
-.eq('id',userId)
-.single()
-
-const clientId = profile.client_id
+await generateReport(clientId, res)
+  }
 
 await generateReport(clientId,res)
 
