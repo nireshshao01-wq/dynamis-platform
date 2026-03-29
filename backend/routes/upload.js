@@ -1,165 +1,269 @@
-const express = require("express")
-const router = express.Router()
-const multer = require("multer")
-const csv = require("csv-parser")
-const supabase = require("../supabaseClient")
-const stream = require("stream")
+/**
+ * Recommendations Engine
+ * Generates actionable cost optimization recommendations
+ */
 
-/* ----------------------------------
-MULTER CONFIG
----------------------------------- */
+class RecommendationsEngine {
+  constructor(billingRecords, wasteAnalysis) {
+    this.records = billingRecords || [];
+    this.wasteAnalysis = wasteAnalysis || {};
+    this.recommendations = [];
+  }
 
-const storage = multer.memoryStorage()
+  generate() {
+    this.recommendations = [];
 
-const upload = multer({
-storage: storage,
-limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
-})
+    const wasteCategories = this.wasteAnalysis.wasteBreakdown || [];
+    
+    wasteCategories.forEach(waste => {
+      switch (waste.category) {
+        case 'Idle Resources':
+          this.recommendIdleResourcesAction(waste);
+          break;
+        case 'Unused VMs':
+          this.recommendUnusedVMsAction(waste);
+          break;
+        case 'Over-Capacity Storage':
+          this.recommendStorageOptimization(waste);
+          break;
+        case 'Unused Snapshots/Backups':
+          this.recommendSnapshotCleanup(waste);
+          break;
+        case 'Expensive Data Transfer':
+          this.recommendDataTransferOptimization(waste);
+          break;
+        case 'Underutilized Compute':
+          this.recommendComputeRightSizing(waste);
+          break;
+      }
+    });
 
-/* ----------------------------------
-UPLOAD CLOUD BILLING CSV
----------------------------------- */
+    this.addProviderSpecificRecommendations();
+    this.addGeneralFinOpsRecommendations();
 
-router.post("/", upload.single("file"), async (req, res) => {
+    return this.recommendations.sort((a, b) => b.estimatedAnnualSavings - a.estimatedAnnualSavings);
+  }
 
-try {
+  recommendIdleResourcesAction(waste) {
+    this.recommendations.push({
+      id: 'idle-resources-001',
+      title: 'Remove Idle Resources',
+      description: `${waste.resourceCount} resources with 0% utilization costing $${waste.wasteAmount.toFixed(2)}/month`,
+      action: 'Delete or stop these resources immediately',
+      priority: 'CRITICAL',
+      complexity: 'LOW',
+      estimatedMonthlySavings: waste.potentialSavings,
+      estimatedAnnualSavings: waste.potentialSavings * 12,
+      implementationTime: '1-2 days',
+      riskLevel: 'LOW',
+      resources: waste.resources,
+      steps: [
+        'Review listed resources',
+        'Verify they are not needed',
+        'Stop or terminate resources',
+        'Monitor for 7 days',
+        'Permanent deletion after verification'
+      ]
+    });
+  }
 
-const clientId = req.body.client_id
+  recommendUnusedVMsAction(waste) {
+    this.recommendations.push({
+      id: 'unused-vms-001',
+      title: 'Eliminate Unused Virtual Machines',
+      description: `${waste.resourceCount} VMs are stopped or underutilized, costing $${waste.wasteAmount.toFixed(2)}/month`,
+      action: 'Terminate or repurpose underutilized VMs',
+      priority: 'CRITICAL',
+      complexity: 'MEDIUM',
+      estimatedMonthlySavings: waste.potentialSavings,
+      estimatedAnnualSavings: waste.potentialSavings * 12,
+      implementationTime: '3-5 days',
+      riskLevel: 'MEDIUM',
+      resources: waste.resources,
+      steps: [
+        'Identify VMs with <10% utilization',
+        'Contact application owners',
+        'Create snapshots for backup',
+        'Migrate workloads if needed',
+        'Terminate unused instances'
+      ]
+    });
+  }
 
-console.log("Upload received for client:", clientId)
+  recommendStorageOptimization(waste) {
+    this.recommendations.push({
+      id: 'storage-optimization-001',
+      title: 'Optimize Storage Capacity Allocation',
+      description: `${waste.resourceCount} storage resources appear over-provisioned, saving potential: $${waste.potentialSavings.toFixed(2)}/month`,
+      action: 'Right-size storage volumes to actual usage',
+      priority: 'HIGH',
+      complexity: 'MEDIUM',
+      estimatedMonthlySavings: waste.potentialSavings,
+      estimatedAnnualSavings: waste.potentialSavings * 12,
+      implementationTime: '5-10 days',
+      riskLevel: 'MEDIUM',
+      resources: waste.resources,
+      steps: [
+        'Analyze actual vs allocated storage',
+        'Identify over-provisioned volumes',
+        'Resize volumes during maintenance',
+        'Consider tiered storage',
+        'Enable compression'
+      ]
+    });
+  }
 
-if (!clientId) {
-return res.status(400).json({ error: "Client ID missing" })
+  recommendSnapshotCleanup(waste) {
+    this.recommendations.push({
+      id: 'snapshot-cleanup-001',
+      title: 'Clean Up Unused Snapshots and Backups',
+      description: `Remove orphaned snapshots to save $${waste.potentialSavings.toFixed(2)}/month`,
+      action: 'Implement snapshot lifecycle policy',
+      priority: 'MEDIUM',
+      complexity: 'LOW',
+      estimatedMonthlySavings: waste.potentialSavings,
+      estimatedAnnualSavings: waste.potentialSavings * 12,
+      implementationTime: '2-3 days',
+      riskLevel: 'LOW',
+      resources: waste.resources,
+      steps: [
+        'Identify old snapshots',
+        'Cross-reference with volumes',
+        'Delete orphaned snapshots',
+        'Implement lifecycle policies',
+        'Set 7-14 day retention'
+      ]
+    });
+  }
+
+  recommendDataTransferOptimization(waste) {
+    this.recommendations.push({
+      id: 'data-transfer-001',
+      title: 'Reduce Data Transfer Costs',
+      description: `Data egress costing $${waste.wasteAmount.toFixed(2)}/month. Optimize with CDN.`,
+      action: 'Implement CDN and optimize data flow',
+      priority: 'HIGH',
+      complexity: 'HIGH',
+      estimatedMonthlySavings: waste.potentialSavings,
+      estimatedAnnualSavings: waste.potentialSavings * 12,
+      implementationTime: '2-3 weeks',
+      riskLevel: 'LOW',
+      resources: waste.resources,
+      steps: [
+        'Implement CDN (CloudFront/Edge/Cloud CDN)',
+        'Cache static assets',
+        'Use same-region transfers',
+        'Compress data',
+        'Batch transfers during off-peak'
+      ]
+    });
+  }
+
+  recommendComputeRightSizing(waste) {
+    this.recommendations.push({
+      id: 'compute-rightsizing-001',
+      title: 'Right-Size Underutilized Compute',
+      description: `${waste.resourceCount} instances using <20% of resources. Savings: $${waste.potentialSavings.toFixed(2)}/month`,
+      action: 'Downsize to appropriate instance types',
+      priority: 'HIGH',
+      complexity: 'MEDIUM',
+      estimatedMonthlySavings: waste.potentialSavings,
+      estimatedAnnualSavings: waste.potentialSavings * 12,
+      implementationTime: '1-2 weeks',
+      riskLevel: 'MEDIUM',
+      resources: waste.resources,
+      steps: [
+        'Review CPU and memory metrics',
+        'Identify oversized instances',
+        'Plan resizing schedule',
+        'Right-size during maintenance',
+        'Monitor post-resize'
+      ]
+    });
+  }
+
+  addProviderSpecificRecommendations() {
+    const providers = new Set(this.records.map(r => r.provider));
+    const monthlySpend = this.wasteAnalysis.summary?.totalMonthlySpend || 0;
+
+    if (providers.has('AWS')) {
+      this.recommendations.push({
+        id: 'aws-reserved-instances-001',
+        title: 'Purchase Reserved Instances',
+        description: 'AWS RIs offer up to 72% discount on compute',
+        action: 'Purchase 1-year or 3-year RIs',
+        priority: 'HIGH',
+        complexity: 'MEDIUM',
+        estimatedMonthlySavings: (monthlySpend * 0.35 * 0.35),
+        estimatedAnnualSavings: (monthlySpend * 0.35 * 0.35 * 12),
+        implementationTime: '1 day',
+        riskLevel: 'LOW',
+        steps: ['Analyze usage', 'Identify baseline', 'Purchase RIs', 'Monitor utilization']
+      });
+    }
+
+    if (providers.has('AZURE')) {
+      this.recommendations.push({
+        id: 'azure-reserved-instances-001',
+        title: 'Purchase Azure Reserved Instances',
+        description: 'Azure RIs offer up to 72% discount',
+        action: 'Buy 1-year or 3-year RIs',
+        priority: 'HIGH',
+        complexity: 'MEDIUM',
+        estimatedMonthlySavings: (monthlySpend * 0.35 * 0.35),
+        estimatedAnnualSavings: (monthlySpend * 0.35 * 0.35 * 12),
+        implementationTime: '1 day',
+        riskLevel: 'LOW',
+        steps: ['Review usage', 'Identify consistent workloads', 'Purchase RIs', 'Monitor']
+      });
+    }
+
+    if (providers.has('GCS')) {
+      this.recommendations.push({
+        id: 'gcs-commitment-001',
+        title: 'Enroll in GCP Commitments',
+        description: 'GCP commitments offer 25-70% discounts',
+        action: 'Purchase GCP commitments',
+        priority: 'HIGH',
+        complexity: 'MEDIUM',
+        estimatedMonthlySavings: (monthlySpend * 0.35 * 0.30),
+        estimatedAnnualSavings: (monthlySpend * 0.35 * 0.30 * 12),
+        implementationTime: '2-3 days',
+        riskLevel: 'LOW',
+        steps: ['Analyze usage', 'Identify predictable workloads', 'Purchase commitments', 'Monitor']
+      });
+    }
+  }
+
+  addGeneralFinOpsRecommendations() {
+    this.recommendations.push({
+      id: 'finops-tagging-001',
+      title: 'Implement Cloud Resource Tagging',
+      description: 'Proper tagging enables cost allocation',
+      action: 'Establish tagging policy',
+      priority: 'HIGH',
+      complexity: 'MEDIUM',
+      estimatedMonthlySavings: 0,
+      estimatedAnnualSavings: 0,
+      implementationTime: '1-2 weeks',
+      riskLevel: 'LOW',
+      steps: ['Define schema', 'Implement via IaC', 'Enforce policies', 'Audit monthly']
+    });
+
+    this.recommendations.push({
+      id: 'finops-budget-alerts-001',
+      title: 'Set Up Budget Alerts',
+      description: 'Catch cost anomalies early',
+      action: 'Configure budget alerts',
+      priority: 'MEDIUM',
+      complexity: 'LOW',
+      estimatedMonthlySavings: 0,
+      estimatedAnnualSavings: 0,
+      implementationTime: '2-3 days',
+      riskLevel: 'LOW',
+      steps: ['Set budgets', 'Configure alerts', 'Enable anomaly detection', 'Review monthly']
+    });
+  }
 }
 
-if (!req.file) {
-return res.status(400).json({ error: "No file uploaded" })
-}
-
-const results = []
-
-/* ----------------------------------
-PARSE CSV
----------------------------------- */
-
-const bufferStream = new stream.PassThrough()
-bufferStream.end(req.file.buffer)
-
-bufferStream
-.pipe(csv())
-.on("data", (row) => {
-
-results.push({
-
-client_id: clientId,
-
-cloud_provider:
-row.cloud_provider ||
-row.provider ||
-row.Provider ||
-"",
-
-service:
-row.service ||
-row.Service ||
-"",
-
-region:
-row.region ||
-row.Region ||
-"",
-
-usage_date:
-row.usage_date ||
-row.date ||
-row.Date ||
-new Date(),
-
-cost:
-Number(row.cost || row.Cost || 0),
-
-waste_cost:
-Number(row.waste_cost || row.Waste || 0),
-
-category:
-row.category ||
-row.Category ||
-"Compute"
-
-})
-
-})
-
-.on("end", async () => {
-
-console.log("CSV rows parsed:", results.length)
-
-if (results.length === 0) {
-return res.status(400).json({
-error: "CSV contained no rows"
-})
-}
-
-/* ----------------------------------
-INSERT INTO SUPABASE (BATCH SAFE)
----------------------------------- */
-
-const batchSize = 500
-
-let inserted = 0
-
-for (let i = 0; i < results.length; i += batchSize) {
-
-const batch = results.slice(i, i + batchSize)
-
-const { error } = await supabase
-.from("cloud_cost_data")
-.insert(batch)
-
-if (error) {
-
-console.error("Supabase insert error:", error)
-
-return res.status(500).json({
-error: "Database insert failed",
-details: error.message
-})
-
-}
-
-inserted += batch.length
-
-}
-
-console.log("Rows inserted:", inserted)
-
-res.json({
-message: "Upload successful",
-rowsInserted: inserted
-})
-
-})
-
-.on("error", (err) => {
-
-console.error("CSV parsing error:", err)
-
-res.status(500).json({
-error: "CSV parsing failed"
-})
-
-})
-
-} catch (err) {
-
-console.error("Upload error:", err)
-
-res.status(500).json({
-error: "Upload processing failed"
-})
-
-}
-
-})
-
-module.exports = router
+module.exports = RecommendationsEngine;
