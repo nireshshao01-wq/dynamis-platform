@@ -1,0 +1,7 @@
+Resource,Cost,Date
+VM,100,2023-01-01
+Storage,50,2023-01-01
+Bandwidth,30,2023-01-01
+VM,120,2023-01-02
+Storage,60,2023-01-02
+Bandwidth,35,2023-01-02
