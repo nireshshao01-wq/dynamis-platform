@@ -106,7 +106,7 @@ app.use("/api/deals", dealsRoute)
 // ANALYTICS
 app.use("/api/opportunities", opportunitiesRoute)
 app.use("/api/anomalies", anomaliesRoute)
-// app.use("/api/report", reportRoute)
+app.use("/api/report", reportRoute)
 
 app.use("/api/analytics", analyticsRoute)
 app.use("/api/finops-score", finopsScoreRoute)
