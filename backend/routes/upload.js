@@ -1,165 +1,146 @@
-const express = require("express")
-const router = express.Router()
-const multer = require("multer")
-const csv = require("csv-parser")
-const supabase = require("../supabaseClient")
-const stream = require("stream")
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const CSVParser = require('../parsers/csvParser');
+const WasteDetectionEngine = require('../engines/wasteDetectionEngine');
+const RecommendationsEngine = require('../engines/recommendationsEngine');
 
-/* ----------------------------------
-MULTER CONFIG
----------------------------------- */
+const router = express.Router();
 
-const storage = multer.memoryStorage()
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}_${file.originalname}`);
+  }
+});
 
 const upload = multer({
-storage: storage,
-limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
-})
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.csv') {
+      cb(new Error('Only CSV files allowed'));
+    } else {
+      cb(null, true);
+    }
+  }
+});
 
-/* ----------------------------------
-UPLOAD CLOUD BILLING CSV
----------------------------------- */
+// POST /api/upload - Upload and analyze billing CSV
+router.post('/', upload.single('file'), async (req, res) => {
+  try {
+    console.log('[UPLOAD] Starting upload process...');
+    
+    if (!req.file || !req.body.client_id) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing file or client_id' 
+      });
+    }
 
-router.post("/", upload.single("file"), async (req, res) => {
+    const filePath = req.file.path;
+    const clientId = req.body.client_id;
 
-try {
+    console.log(`[UPLOAD] Processing: ${req.file.filename} for client: ${clientId}`);
 
-const clientId = req.body.client_id
+    // Step 1: Parse CSV
+    console.log('[UPLOAD] Parsing CSV file...');
+    let parseResult = await CSVParser.parseCSVFile(filePath);
+    
+    if (!parseResult.success || parseResult.totalRows === 0) {
+      throw new Error('Failed to parse CSV or file is empty');
+    }
 
-console.log("Upload received for client:", clientId)
+    console.log(`[UPLOAD] ✅ Parsed ${parseResult.totalRows} records from ${parseResult.provider}`);
 
-if (!clientId) {
-return res.status(400).json({ error: "Client ID missing" })
-}
+    // Step 2: Run waste detection
+    console.log('[UPLOAD] Running waste detection...');
+    const wasteEngine = new WasteDetectionEngine(parseResult.records);
+    const wasteSummary = wasteEngine.getSummary();
 
-if (!req.file) {
-return res.status(400).json({ error: "No file uploaded" })
-}
+    console.log(`[UPLOAD] ✅ Waste Analysis Complete`);
+    console.log(`  - Total Spend: $${wasteSummary.summary.totalMonthlySpend}`);
+    console.log(`  - Identified Waste: $${wasteSummary.summary.identifiedWaste}`);
+    console.log(`  - Risk Level: ${wasteSummary.riskLevel}`);
 
-const results = []
+    // Step 3: Generate recommendations
+    console.log('[UPLOAD] Generating recommendations...');
+    const recommendationEngine = new RecommendationsEngine(parseResult.records, wasteSummary);
+    const recommendations = recommendationEngine.generate();
 
-/* ----------------------------------
-PARSE CSV
----------------------------------- */
+    console.log(`[UPLOAD] ✅ Generated ${recommendations.length} recommendations`);
 
-const bufferStream = new stream.PassThrough()
-bufferStream.end(req.file.buffer)
+    // Prepare response
+    const uploadResult = {
+      success: true,
+      message: 'Billing data processed successfully',
+      analysis: {
+        provider: parseResult.provider,
+        rowsProcessed: parseResult.totalRows,
+        processingTimestamp: parseResult.timestamp,
+        clientId: clientId
+      },
+      wasteAnalysis: {
+        totalMonthlySpend: parseFloat(wasteSummary.summary.totalMonthlySpend.toFixed(2)),
+        identifiedWaste: parseFloat(wasteSummary.summary.identifiedWaste.toFixed(2)),
+        wastePercentage: parseFloat(wasteSummary.summary.wastePercentage),
+        potentialAnnualSavings: parseFloat(wasteSummary.summary.potentialAnnualSavings.toFixed(2)),
+        riskLevel: wasteSummary.riskLevel,
+        breakdown: wasteSummary.wasteBreakdown.map(wb => ({
+          category: wb.category,
+          severity: wb.severity,
+          resourceCount: wb.resourceCount,
+          wasteAmount: parseFloat(wb.wasteAmount.toFixed(2)),
+          potentialSavings: parseFloat(wb.potentialSavings.toFixed(2))
+        }))
+      },
+      recommendations: {
+        total: recommendations.length,
+        topOpportunities: recommendations.slice(0, 5).map(r => ({
+          id: r.id,
+          title: r.title,
+          priority: r.priority,
+          estimatedMonthlySavings: parseFloat(r.estimatedMonthlySavings.toFixed(2)),
+          estimatedAnnualSavings: parseFloat(r.estimatedAnnualSavings.toFixed(2)),
+          complexity: r.complexity
+        })),
+        allRecommendations: recommendations
+      },
+      summary: {
+        actionItems: recommendations.filter(r => r.priority === 'CRITICAL').length,
+        totalEstimatedAnnualSavings: parseFloat(
+          recommendations.reduce((sum, r) => sum + r.estimatedAnnualSavings, 0).toFixed(2)
+        )
+      }
+    };
 
-bufferStream
-.pipe(csv())
-.on("data", (row) => {
+    // Clean up uploaded file
+    fs.unlinkSync(filePath);
+    
+    console.log('[UPLOAD] ✅ SUCCESS - Returning results');
+    res.json(uploadResult);
 
-results.push({
+  } catch (err) {
+    console.error('[UPLOAD] ❌ ERROR:', err.message);
+    
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
 
-client_id: clientId,
+    res.status(500).json({ 
+      success: false, 
+      error: err.message 
+    });
+  }
+});
 
-cloud_provider:
-row.cloud_provider ||
-row.provider ||
-row.Provider ||
-"",
-
-service:
-row.service ||
-row.Service ||
-"",
-
-region:
-row.region ||
-row.Region ||
-"",
-
-usage_date:
-row.usage_date ||
-row.date ||
-row.Date ||
-new Date(),
-
-cost:
-Number(row.cost || row.Cost || 0),
-
-waste_cost:
-Number(row.waste_cost || row.Waste || 0),
-
-category:
-row.category ||
-row.Category ||
-"Compute"
-
-})
-
-})
-
-.on("end", async () => {
-
-console.log("CSV rows parsed:", results.length)
-
-if (results.length === 0) {
-return res.status(400).json({
-error: "CSV contained no rows"
-})
-}
-
-/* ----------------------------------
-INSERT INTO SUPABASE (BATCH SAFE)
----------------------------------- */
-
-const batchSize = 500
-
-let inserted = 0
-
-for (let i = 0; i < results.length; i += batchSize) {
-
-const batch = results.slice(i, i + batchSize)
-
-const { error } = await supabase
-.from("cloud_cost_data")
-.insert(batch)
-
-if (error) {
-
-console.error("Supabase insert error:", error)
-
-return res.status(500).json({
-error: "Database insert failed",
-details: error.message
-})
-
-}
-
-inserted += batch.length
-
-}
-
-console.log("Rows inserted:", inserted)
-
-res.json({
-message: "Upload successful",
-rowsInserted: inserted
-})
-
-})
-
-.on("error", (err) => {
-
-console.error("CSV parsing error:", err)
-
-res.status(500).json({
-error: "CSV parsing failed"
-})
-
-})
-
-} catch (err) {
-
-console.error("Upload error:", err)
-
-res.status(500).json({
-error: "Upload processing failed"
-})
-
-}
-
-})
-
-module.exports = router
+module.exports = router;
